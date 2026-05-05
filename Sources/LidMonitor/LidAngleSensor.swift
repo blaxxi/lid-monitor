@@ -74,7 +74,8 @@ final class LidAngleSensor {
 
     private func schedulePolling() {
         let timer = Timer(timeInterval: pollInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.readNow() }
+            guard let self else { return }
+            Task { @MainActor in self.readNow() }
         }
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer

@@ -28,8 +28,8 @@ final class Preferences: ObservableObject {
 
     // MARK: - Bounds
 
-    static let thresholdRange: ClosedRange<Int> = 5...90
-    static let thresholdStep = 5
+    nonisolated static let thresholdRange: ClosedRange<Int> = 5...90
+    nonisolated static let thresholdStep = 5
 
     // MARK: - Init
 

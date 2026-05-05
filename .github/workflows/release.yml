@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. v0.1.0)'
+        required: true
 
 permissions:
   contents: write
@@ -10,7 +15,7 @@ permissions:
 jobs:
   build:
     name: Build universal .app
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
