@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build universal .app
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: swift --version
+
+      - name: Build universal binary (arm64 + x86_64)
+        run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Assemble .app bundle
+        env:
+          APP_NAME: LidMonitor
+        run: |
+          set -euo pipefail
+          BIN_DIR=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
+          APP="dist/${APP_NAME}.app"
+          mkdir -p "${APP}/Contents/MacOS" "${APP}/Contents/Resources"
+          cp "${BIN_DIR}/${APP_NAME}" "${APP}/Contents/MacOS/${APP_NAME}"
+          cp Resources/Info.plist "${APP}/Contents/Info.plist"
+          cp Resources/AppIcon.icns "${APP}/Contents/Resources/AppIcon.icns"
+          codesign --force --deep --sign - "${APP}"
+          file "${APP}/Contents/MacOS/${APP_NAME}"
+
+      - name: Package zip + checksum
+        run: |
+          set -euo pipefail
+          cd dist
+          ditto -c -k --keepParent LidMonitor.app LidMonitor.app.zip
+          shasum -a 256 LidMonitor.app.zip | tee LidMonitor.app.zip.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LidMonitor-app
+          path: |
+            dist/LidMonitor.app.zip
+            dist/LidMonitor.app.zip.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: LidMonitor-app
+          path: dist
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { in_section = 1; next }
+            in_section && /^## \[/ { exit }
+            in_section && /^\[.+\]:[[:space:]]/ { exit }
+            in_section { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "No CHANGELOG section found for $version" >&2
+            exit 1
+          fi
+          cat release_notes.md
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LidMonitor ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: |
+            dist/LidMonitor.app.zip
+            dist/LidMonitor.app.zip.sha256
+          draft: false
+          prerelease: false

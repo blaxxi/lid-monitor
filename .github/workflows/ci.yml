@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: swift --version
+
+      - name: Build (debug)
+        run: swift build
+
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: Sanity-check bundle assembly
+        run: |
+          ./build.sh
+          test -x .build/release/LidMonitor.app/Contents/MacOS/LidMonitor
+          test -f .build/release/LidMonitor.app/Contents/Info.plist
+          test -f .build/release/LidMonitor.app/Contents/Resources/AppIcon.icns
+          codesign -v .build/release/LidMonitor.app

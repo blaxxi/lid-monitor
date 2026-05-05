@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode (in case the package is opened in Xcode)
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Local working dirs
+tmp/
+.claude/
+dist/
